@@ -212,28 +212,42 @@ public class TrinityLake {
       LakehouseStorage storage,
       RunningTransaction transaction,
       String namespaceName,
-      boolean cascade)
+      DropNamespaceBehavior dropNsBehavior)
       throws ObjectNotFoundException, NonEmptyNamespaceException, CommitFailureException {
-    LakehouseDef lakehouseDef = TreeOperations.findLakehouseDef(storage, transaction.runningRoot());
+    RunningTransaction dropNsTransaction = transaction;
+    LakehouseDef lakehouseDef =
+        TreeOperations.findLakehouseDef(storage, dropNsTransaction.runningRoot());
     String namespaceKey = ObjectKeys.namespaceKey(namespaceName, lakehouseDef);
-    if (!TreeOperations.searchValue(storage, transaction.runningRoot(), namespaceKey).isPresent()) {
+    if (!TreeOperations.searchValue(storage, dropNsTransaction.runningRoot(), namespaceKey)
+        .isPresent()) {
       throw new ObjectNotFoundException("Namespace %s does not exist", namespaceName);
     }
 
-    List<String> tableNames = TrinityLake.showTables(storage, transaction, namespaceName);
-    RunningTransaction newTranscation = transaction;
-    if (cascade) {
-      for (String tableName : tableNames) {
-        newTranscation = TrinityLake.dropTable(storage, newTranscation, namespaceName, tableName);
-      }
-    } else if (!tableNames.isEmpty()) {
-      // RESTRICT
-      throw new NonEmptyNamespaceException("Namespace %s is not empty", namespaceName);
+    List<String> tableNames = TrinityLake.showTables(storage, dropNsTransaction, namespaceName);
+
+    switch (dropNsBehavior) {
+      case CASCADE:
+        for (String tableName : tableNames) {
+          dropNsTransaction =
+              TrinityLake.dropTable(storage, dropNsTransaction, namespaceName, tableName);
+        }
+        break;
+      case RESTRICT:
+        if (!tableNames.isEmpty()) {
+          throw new NonEmptyNamespaceException("Namespace %s is not empty", namespaceName);
+        }
+        break;
+      default:
+        throw new IllegalArgumentException(
+            String.format("DropNamespaceBehavior %s is not supported", dropNsBehavior));
     }
 
-    TreeRoot newRoot = TreeOperations.cloneTreeRoot(newTranscation.runningRoot());
+    TreeRoot newRoot = TreeOperations.cloneTreeRoot(dropNsTransaction.runningRoot());
     TreeOperations.removeKey(storage, newRoot, namespaceKey);
-    return ImmutableRunningTransaction.builder().from(newTranscation).runningRoot(newRoot).build();
+    return ImmutableRunningTransaction.builder()
+        .from(dropNsTransaction)
+        .runningRoot(newRoot)
+        .build();
   }
 
   public static List<String> showTables(

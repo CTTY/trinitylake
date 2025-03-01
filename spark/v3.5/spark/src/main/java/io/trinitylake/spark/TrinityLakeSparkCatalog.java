@@ -13,6 +13,7 @@
  */
 package io.trinitylake.spark;
 
+import io.trinitylake.DropNamespaceBehavior;
 import io.trinitylake.ObjectDefinitions;
 import io.trinitylake.RunningTransaction;
 import io.trinitylake.TrinityLake;
@@ -146,7 +147,12 @@ public class TrinityLakeSparkCatalog implements StagingTableCatalog, SupportsNam
     RunningTransaction transaction = currentTransaction();
 
     try {
-      transaction = TrinityLake.dropNamespace(storage, transaction, namespaceName, cascade);
+      transaction =
+          TrinityLake.dropNamespace(
+              storage,
+              transaction,
+              namespaceName,
+              cascade ? DropNamespaceBehavior.CASCADE : DropNamespaceBehavior.RESTRICT);
     } catch (ObjectNotFoundException e) {
       throw new NoSuchNamespaceException(namespace);
     } catch (NonEmptyNamespaceException e) {

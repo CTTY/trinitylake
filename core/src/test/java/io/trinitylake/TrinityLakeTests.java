@@ -137,7 +137,8 @@ public abstract class TrinityLakeTests {
 
     RunningTransaction transaction = TrinityLake.beginTransaction(storage);
     assertThat(TrinityLake.namespaceExists(storage, transaction, NAMESPACE)).isTrue();
-    transaction = TrinityLake.dropNamespace(storage, transaction, NAMESPACE, false);
+    transaction =
+        TrinityLake.dropNamespace(storage, transaction, NAMESPACE, DropNamespaceBehavior.RESTRICT);
     TrinityLake.commitTransaction(storage, transaction);
     transaction = TrinityLake.beginTransaction(storage);
 
@@ -153,7 +154,8 @@ public abstract class TrinityLakeTests {
     assertThat(TrinityLake.namespaceExists(storage, transaction, NAMESPACE)).isTrue();
     assertThat(TrinityLake.tableExists(storage, transaction, NAMESPACE, TABLE1)).isTrue();
     assertThat(TrinityLake.tableExists(storage, transaction, NAMESPACE, TABLE2)).isTrue();
-    transaction = TrinityLake.dropNamespace(storage, transaction, NAMESPACE, true);
+    transaction =
+        TrinityLake.dropNamespace(storage, transaction, NAMESPACE, DropNamespaceBehavior.CASCADE);
     TrinityLake.commitTransaction(storage, transaction);
     transaction = TrinityLake.beginTransaction(storage);
 
@@ -171,7 +173,10 @@ public abstract class TrinityLakeTests {
     assertThat(TrinityLake.namespaceExists(storage, transaction, NAMESPACE)).isTrue();
     assertThat(TrinityLake.tableExists(storage, transaction, NAMESPACE, TABLE1)).isTrue();
     assertThat(TrinityLake.tableExists(storage, transaction, NAMESPACE, TABLE2)).isTrue();
-    assertThatThrownBy(() -> TrinityLake.dropNamespace(storage, transaction, NAMESPACE, false))
+    assertThatThrownBy(
+            () ->
+                TrinityLake.dropNamespace(
+                    storage, transaction, NAMESPACE, DropNamespaceBehavior.RESTRICT))
         .isInstanceOf(NonEmptyNamespaceException.class)
         .hasMessageContaining(String.format("Namespace %s is not empty", NAMESPACE));
   }
