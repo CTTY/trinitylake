@@ -208,7 +208,10 @@ public class TrinityLake {
   }
 
   public static RunningTransaction dropNamespace(
-      LakehouseStorage storage, RunningTransaction transaction, String namespaceName, boolean cascade)
+      LakehouseStorage storage,
+      RunningTransaction transaction,
+      String namespaceName,
+      boolean cascade)
       throws ObjectNotFoundException, CommitFailureException {
     LakehouseDef lakehouseDef = TreeOperations.findLakehouseDef(storage, transaction.runningRoot());
     String namespaceKey = ObjectKeys.namespaceKey(namespaceName, lakehouseDef);

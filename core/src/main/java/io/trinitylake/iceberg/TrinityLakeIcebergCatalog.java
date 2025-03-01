@@ -302,7 +302,8 @@ public class TrinityLakeIcebergCatalog implements Catalog, SupportsNamespaces {
 
     try {
       // cascade is false by default to keep consistent with Iceberg's HiveCatalog
-      transaction = TrinityLake.dropNamespace(storage, transaction, parseResult.namespaceName(), false);
+      transaction =
+          TrinityLake.dropNamespace(storage, transaction, parseResult.namespaceName(), false);
     } catch (ObjectNotFoundException e) {
       LOG.warn("Detected dropping non-existent namespace {}", namespace);
       return false;
