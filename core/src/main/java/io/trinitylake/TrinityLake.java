@@ -208,12 +208,19 @@ public class TrinityLake {
   }
 
   public static RunningTransaction dropNamespace(
-      LakehouseStorage storage, RunningTransaction transaction, String namespaceName)
+      LakehouseStorage storage, RunningTransaction transaction, String namespaceName, boolean cascade)
       throws ObjectNotFoundException, CommitFailureException {
     LakehouseDef lakehouseDef = TreeOperations.findLakehouseDef(storage, transaction.runningRoot());
     String namespaceKey = ObjectKeys.namespaceKey(namespaceName, lakehouseDef);
     if (!TreeOperations.searchValue(storage, transaction.runningRoot(), namespaceKey).isPresent()) {
       throw new ObjectNotFoundException("Namespace %s does not exist", namespaceName);
+    }
+
+    if (cascade) {
+      List<String> tableNames = TrinityLake.showTables(storage, transaction, namespaceName);
+      for (String tableName : tableNames) {
+        transaction = TrinityLake.dropTable(storage, transaction, namespaceName, tableName);
+      }
     }
 
     TreeRoot newRoot = TreeOperations.cloneTreeRoot(transaction.runningRoot());

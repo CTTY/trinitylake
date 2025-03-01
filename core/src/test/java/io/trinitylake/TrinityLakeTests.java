@@ -125,11 +125,27 @@ public abstract class TrinityLakeTests {
 
     RunningTransaction transaction = TrinityLake.beginTransaction(storage);
     assertThat(TrinityLake.namespaceExists(storage, transaction, NAMESPACE)).isTrue();
-    transaction = TrinityLake.dropNamespace(storage, transaction, NAMESPACE);
+    transaction = TrinityLake.dropNamespace(storage, transaction, NAMESPACE, false);
     TrinityLake.commitTransaction(storage, transaction);
     transaction = TrinityLake.beginTransaction(storage);
 
     assertThat(TrinityLake.namespaceExists(storage, transaction, NAMESPACE)).isFalse();
+  }
+
+  @Test
+  public void testDropNamespaceCascade() {
+    LakehouseStorage storage = storage();
+    createNamespaceAndTables();
+
+    RunningTransaction transaction = TrinityLake.beginTransaction(storage);
+    assertThat(TrinityLake.namespaceExists(storage, transaction, NAMESPACE)).isTrue();
+    assertThat(TrinityLake.tableExists(storage, transaction, NAMESPACE, TABLE)).isTrue();
+    transaction = TrinityLake.dropNamespace(storage, transaction, NAMESPACE, true);
+    TrinityLake.commitTransaction(storage, transaction);
+    transaction = TrinityLake.beginTransaction(storage);
+
+    assertThat(TrinityLake.namespaceExists(storage, transaction, NAMESPACE)).isFalse();
+    assertThat(TrinityLake.tableExists(storage, transaction, NAMESPACE, TABLE)).isFalse();
   }
 
   @Test
@@ -345,6 +361,14 @@ public abstract class TrinityLakeTests {
     LakehouseStorage storage = storage();
     RunningTransaction transaction = TrinityLake.beginTransaction(storage);
     transaction = TrinityLake.createNamespace(storage, transaction, NAMESPACE, NAMESPACE_DEF);
+    TrinityLake.commitTransaction(storage, transaction);
+  }
+
+  protected void createNamespaceAndTables() {
+    LakehouseStorage storage = storage();
+    RunningTransaction transaction = TrinityLake.beginTransaction(storage);
+    transaction = TrinityLake.createNamespace(storage, transaction, NAMESPACE, NAMESPACE_DEF);
+    transaction = TrinityLake.createTable(storage, transaction, NAMESPACE, TABLE, TABLE_DEF);
     TrinityLake.commitTransaction(storage, transaction);
   }
 }

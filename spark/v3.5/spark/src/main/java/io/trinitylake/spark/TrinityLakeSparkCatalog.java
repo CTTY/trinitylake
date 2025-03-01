@@ -140,22 +140,14 @@ public class TrinityLakeSparkCatalog implements StagingTableCatalog, SupportsNam
 
   @Override
   public boolean dropNamespace(String[] namespace, boolean cascade)
-      throws NoSuchNamespaceException, NonEmptyNamespaceException {
+      throws NoSuchNamespaceException {
     String namespaceName = SparkToTrinityLake.namespaceName(namespace);
     RunningTransaction transaction = currentTransaction();
 
     try {
-      transaction = TrinityLake.dropNamespace(storage, transaction, namespaceName);
+      transaction = TrinityLake.dropNamespace(storage, transaction, namespaceName, cascade);
     } catch (ObjectNotFoundException e) {
       throw new NoSuchNamespaceException(namespace);
-    }
-
-    // TODO: move this to the core library
-    if (cascade) {
-      List<String> tableNames = TrinityLake.showTables(storage, transaction, namespaceName);
-      for (String tableName : tableNames) {
-        transaction = TrinityLake.dropTable(storage, transaction, namespaceName, tableName);
-      }
     }
 
     TrinityLake.commitTransaction(storage, transaction);
