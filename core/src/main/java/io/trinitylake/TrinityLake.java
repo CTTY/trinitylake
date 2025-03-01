@@ -14,6 +14,7 @@
 package io.trinitylake;
 
 import io.trinitylake.exception.CommitFailureException;
+import io.trinitylake.exception.NonEmptyNamespaceException;
 import io.trinitylake.exception.ObjectAlreadyExistsException;
 import io.trinitylake.exception.ObjectNotFoundException;
 import io.trinitylake.models.LakehouseDef;
@@ -212,23 +213,27 @@ public class TrinityLake {
       RunningTransaction transaction,
       String namespaceName,
       boolean cascade)
-      throws ObjectNotFoundException, CommitFailureException {
+      throws ObjectNotFoundException, NonEmptyNamespaceException, CommitFailureException {
     LakehouseDef lakehouseDef = TreeOperations.findLakehouseDef(storage, transaction.runningRoot());
     String namespaceKey = ObjectKeys.namespaceKey(namespaceName, lakehouseDef);
     if (!TreeOperations.searchValue(storage, transaction.runningRoot(), namespaceKey).isPresent()) {
       throw new ObjectNotFoundException("Namespace %s does not exist", namespaceName);
     }
 
+    List<String> tableNames = TrinityLake.showTables(storage, transaction, namespaceName);
+    RunningTransaction newTranscation = transaction;
     if (cascade) {
-      List<String> tableNames = TrinityLake.showTables(storage, transaction, namespaceName);
       for (String tableName : tableNames) {
-        transaction = TrinityLake.dropTable(storage, transaction, namespaceName, tableName);
+        newTranscation = TrinityLake.dropTable(storage, newTranscation, namespaceName, tableName);
       }
+    } else if (!tableNames.isEmpty()) {
+      // RESTRICT
+      throw new NonEmptyNamespaceException("Namespace %s is not empty", namespaceName);
     }
 
-    TreeRoot newRoot = TreeOperations.cloneTreeRoot(transaction.runningRoot());
+    TreeRoot newRoot = TreeOperations.cloneTreeRoot(newTranscation.runningRoot());
     TreeOperations.removeKey(storage, newRoot, namespaceKey);
-    return ImmutableRunningTransaction.builder().from(transaction).runningRoot(newRoot).build();
+    return ImmutableRunningTransaction.builder().from(newTranscation).runningRoot(newRoot).build();
   }
 
   public static List<String> showTables(

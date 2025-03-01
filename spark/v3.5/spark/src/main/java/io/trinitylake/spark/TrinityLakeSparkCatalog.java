@@ -16,6 +16,7 @@ package io.trinitylake.spark;
 import io.trinitylake.ObjectDefinitions;
 import io.trinitylake.RunningTransaction;
 import io.trinitylake.TrinityLake;
+import io.trinitylake.exception.NonEmptyNamespaceException;
 import io.trinitylake.exception.ObjectAlreadyExistsException;
 import io.trinitylake.exception.ObjectNotFoundException;
 import io.trinitylake.models.NamespaceDef;
@@ -139,7 +140,8 @@ public class TrinityLakeSparkCatalog implements StagingTableCatalog, SupportsNam
 
   @Override
   public boolean dropNamespace(String[] namespace, boolean cascade)
-      throws NoSuchNamespaceException {
+      throws NoSuchNamespaceException,
+          org.apache.spark.sql.catalyst.analysis.NonEmptyNamespaceException {
     String namespaceName = SparkToTrinityLake.namespaceName(namespace);
     RunningTransaction transaction = currentTransaction();
 
@@ -147,6 +149,8 @@ public class TrinityLakeSparkCatalog implements StagingTableCatalog, SupportsNam
       transaction = TrinityLake.dropNamespace(storage, transaction, namespaceName, cascade);
     } catch (ObjectNotFoundException e) {
       throw new NoSuchNamespaceException(namespace);
+    } catch (NonEmptyNamespaceException e) {
+      throw new org.apache.spark.sql.catalyst.analysis.NonEmptyNamespaceException(namespace);
     }
 
     TrinityLake.commitTransaction(storage, transaction);
